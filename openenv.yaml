@@ -1,0 +1,44 @@
+name: tabular-analyst-openenv
+description: Multi-step data analyst environment over messy real-world style tables.
+version: "1.0"
+
+environment:
+  module: env.environment
+  class: DataEnv
+  methods:
+    - reset
+    - step
+    - state
+
+models:
+  action_model: env.actions.Action
+  observation_model: env.observations.Observation
+
+tasks:
+  source: env.tasks.ALL_TASKS
+  levels:
+    - easy
+    - medium
+    - hard
+  count_min: 3
+
+reward:
+  primary: env.reward.shaped_reward
+  notes:
+    - partial trajectory credit (select/filter/final)
+    - invalid action penalty -0.3
+    - useless action penalty -0.1
+    - confidence-calibrated final-step penalty/boost
+
+grader:
+  module: grader.grader
+  function: grade
+  score_range: [0.0, 1.0]
+
+baseline:
+  run_script: scripts/run_baseline.py
+  eval_script: scripts/eval_baseline.py
+  reproducibility:
+    seed_env_var: BASELINE_SEED
+    default_seed: 42
+    temperature: 0.0
