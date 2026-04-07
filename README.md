@@ -111,7 +111,8 @@ python scripts/eval_baseline.py
 ```
 
 Environment variables:
-- `GROQ_API_KEY` (required)
+- 'OPENAI_API_KEY'
+- `GROQ_API_KEY`
 - `GROQ_MODEL` (optional)
 - `BASELINE_SEED` (optional, default `42`)
 
@@ -126,7 +127,8 @@ pip install -r requirements.txt
 Set key:
 
 ```powershell
-$env:GROQ_API_KEY="gsk_..."
+$env:OPENAI_API_KEY="..."
+$env:GROQ_API_KEY="..."
 ```
 
 ## Hugging Face Spaces deployment (Docker)
