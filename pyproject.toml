@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "tabular-analyst-openenv"
+version = "0.1.0"
+description = "Multi-step tabular analyst OpenEnv baseline."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "OpenEnv Participant" }]
+dependencies = [
+  "openenv-core>=0.2.0",
+  "openai>=2.0.0",
+  "pydantic>=2.0.0",
+  "gradio>=4.44.0",
+  "fastapi>=0.110.0",
+  "uvicorn[standard]>=0.27.0",
+  "PyYAML>=6.0.0",
+]
+
+[project.scripts]
+server = "app:main"
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.packages.find]
+include = ["agent*", "env*", "grader*", "scripts*"]
