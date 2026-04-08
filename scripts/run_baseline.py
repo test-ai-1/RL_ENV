@@ -13,6 +13,7 @@ if str(_PROJECT_ROOT) not in sys.path:
 from agent.baseline_agent import BaselineAgent
 from env.environment import DataEnv
 from env.tasks import ALL_TASKS
+from scripts.llm_env import ensure_llm_env_defaults, has_api_key
 
 
 def _diagnose_failures(intermediate_results: list[dict]) -> list[str]:
@@ -70,20 +71,13 @@ def _load_env_file(path: Path) -> None:
 
 def main() -> None:
     _load_env_file(_PROJECT_ROOT / ".env")
-    if not (
-        os.environ.get("GROQ_API_KEY", "").strip()
-        or os.environ.get("OPENAI_API_KEY", "").strip()
-    ):
+    ensure_llm_env_defaults()
+    if not has_api_key():
         print(
-            "Neither OPENAI_API_KEY nor GROQ_API_KEY is set.\n"
-            "  • PowerShell (OpenAI): $env:OPENAI_API_KEY = 'sk-...'\n"
-            "  • PowerShell (Groq):   $env:GROQ_API_KEY = 'gsk_...'\n"
-            f"  • Or add to {_PROJECT_ROOT / '.env'} one of:\n"
-            "      OPENAI_API_KEY=sk-...\n"
-            "      GROQ_API_KEY=gsk_...\n"
-            "  • Optional model vars:\n"
-            "      OPENAI_MODEL=gpt-4o-mini\n"
-            "      GROQ_MODEL=openai/gpt-oss-120b",
+            "Set HF_TOKEN or OPENAI_API_KEY.\n"
+            "  • PowerShell:  $env:HF_TOKEN = 'sk-...'\n"
+            f"  • Or add to     {_PROJECT_ROOT / '.env'}\n"
+            "  • Also set API_BASE_URL (e.g. https://api.openai.com/v1) and MODEL_NAME for inference.py",
             file=sys.stderr,
         )
         sys.exit(1)
