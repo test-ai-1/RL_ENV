@@ -14,17 +14,16 @@ from agent.baseline_agent import BaselineAgent
 from env.environment import DataEnv
 from env.tasks import ALL_TASKS
 from grader.grader import grade
+from scripts.llm_env import ensure_llm_env_defaults, has_api_key
 from scripts.run_baseline import _load_env_file
 
 
 def main() -> None:
     _load_env_file(_PROJECT_ROOT / ".env")
-    if not (
-        os.environ.get("GROQ_API_KEY", "").strip()
-        or os.environ.get("OPENAI_API_KEY", "").strip()
-    ):
+    ensure_llm_env_defaults()
+    if not has_api_key():
         print(
-            "OPENAI_API_KEY or GROQ_API_KEY is required for evaluation.",
+            "HF_TOKEN or OPENAI_API_KEY is required for evaluation.",
             file=sys.stderr,
         )
         sys.exit(1)
