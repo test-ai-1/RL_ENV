@@ -36,9 +36,18 @@ grader:
   score_range: [0.0, 1.0]
 
 baseline:
+  inference_script: inference.py
   run_script: scripts/run_baseline.py
   eval_script: scripts/eval_baseline.py
   reproducibility:
     seed_env_var: BASELINE_SEED
     default_seed: 42
     temperature: 0.0
+
+# Pre-submission / evaluation standard env (OpenAI client)
+submission:
+  required_env:
+    - API_BASE_URL
+    - MODEL_NAME
+    - HF_TOKEN
+  precheck_script: scripts/pre_submit_check.py
