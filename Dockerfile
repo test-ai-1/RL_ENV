@@ -13,4 +13,5 @@ COPY . .
 
 EXPOSE 7860
 
-CMD ["python", "app.py"]
+# Hugging Face may set PORT; default 7860 for local runs.
+CMD ["sh", "-c", "uvicorn app:app --host 0.0.0.0 --port ${PORT:-7860}"]
