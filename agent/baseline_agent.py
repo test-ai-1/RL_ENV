@@ -1,4 +1,4 @@
-"""Baseline agent: maps observations to actions via the Groq Chat Completions API (OpenAI-compatible)."""
+"""Baseline agent: maps observations to actions via the OpenAI Chat Completions API."""
 
 from __future__ import annotations
 
@@ -12,10 +12,6 @@ from openai import APIError, OpenAI, RateLimitError
 from env.actions import Action
 from env.observations import Observation
 
-# Groq exposes an OpenAI-compatible API; see https://console.groq.com/docs/openai
-_GROQ_BASE_URL = "https://api.groq.com/openai/v1"
-# Override with env GROQ_MODEL if this id is unavailable in your account.
-_DEFAULT_GROQ_MODEL = "openai/gpt-oss-120b"
 _DEFAULT_OPENAI_MODEL = "gpt-4o-mini"
 
 _SYSTEM_PROMPT = """You are a multi-step data analyst agent. Decide ONE next action per turn.
@@ -69,10 +65,10 @@ def _extract_json_object(text: str) -> dict[str, Any]:
 
 class BaselineAgent:
     """
-    Calls Groq with the observation and returns a validated :class:`Action`.
+    Calls OpenAI with the observation and returns a validated :class:`Action`.
 
-    Requires ``GROQ_API_KEY``. Optional ``GROQ_MODEL`` (defaults to
-    ``openai/gpt-oss-120b`` or the constructor ``model`` argument).
+    Requires ``OPENAI_API_KEY``. Optional ``OPENAI_MODEL`` (defaults to
+    ``gpt-4o-mini`` or the constructor ``model`` argument).
     """
 
     def __init__(
@@ -83,16 +79,20 @@ class BaselineAgent:
         temperature: float = 0.0,
         seed: int = 42,
     ) -> None:
-        openai_key = os.environ.get("OPENAI_API_KEY", "").strip()
-        groq_key = os.environ.get("GROQ_API_KEY", "").strip()
+        # Pre-submission checklist: HF_TOKEN + MODEL_NAME + API_BASE_URL
+        api_key = (
+            os.environ.get("HF_TOKEN", "").strip()
+            or os.environ.get("OPENAI_API_KEY", "").strip()
+        )
+        api_base = os.environ.get("API_BASE_URL", "").strip()
         if model:
             self._model = model
-        elif os.environ.get("GROQ_MODEL", "").strip():
-            self._model = os.environ["GROQ_MODEL"].strip()
+        elif os.environ.get("MODEL_NAME", "").strip():
+            self._model = os.environ["MODEL_NAME"].strip()
         elif os.environ.get("OPENAI_MODEL", "").strip():
             self._model = os.environ["OPENAI_MODEL"].strip()
         else:
-            self._model = _DEFAULT_OPENAI_MODEL if openai_key else _DEFAULT_GROQ_MODEL
+            self._model = _DEFAULT_OPENAI_MODEL
         self._temperature = temperature
         self._seed = seed
 
@@ -100,24 +100,14 @@ class BaselineAgent:
             self._client = client
             return
 
-        if not openai_key and not groq_key:
+        if not api_key:
             raise ValueError(
-                "Neither OPENAI_API_KEY nor GROQ_API_KEY is set. Add one to your "
-                "environment or .env file."
+                "Set HF_TOKEN or OPENAI_API_KEY for the OpenAI client."
             )
-
-        # If both keys are available, default to OpenAI unless model looks Groq-specific.
-        use_groq = False
-        if groq_key and not openai_key:
-            use_groq = True
-        elif groq_key and openai_key:
-            m = self._model.lower()
-            use_groq = m.startswith("openai/") or "llama" in m or "mixtral" in m
-
-        if use_groq:
-            self._client = OpenAI(base_url=_GROQ_BASE_URL, api_key=groq_key)
-        else:
-            self._client = OpenAI(api_key=openai_key)
+        client_kwargs: dict[str, Any] = {"api_key": api_key}
+        if api_base:
+            client_kwargs["base_url"] = api_base.rstrip("/")
+        self._client = OpenAI(**client_kwargs)
 
     def act(self, observation: Observation) -> Action:
         """Return an action for the given observation."""
@@ -144,8 +134,7 @@ class BaselineAgent:
             )
         except RateLimitError as exc:
             raise RuntimeError(
-                "Groq returned 429 (rate limit). Retry later or check limits at "
-                "https://console.groq.com/"
+                "OpenAI returned 429 (rate limit). Retry later or check your account limits."
             ) from exc
         except APIError as exc:
             # Some models may not support JSON mode; retry without it.
@@ -161,7 +150,7 @@ class BaselineAgent:
 
         raw = completion.choices[0].message.content
         if not raw:
-            raise RuntimeError("Groq returned empty message content")
+            raise RuntimeError("OpenAI returned empty message content")
 
         data = _extract_json_object(raw)
         return Action.model_validate(data)
