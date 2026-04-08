@@ -1,5 +1,4 @@
 """Curated adversarial analyst tasks (easy → hard).
-
 The environment is **multi-step**: ``filter`` narrows the working table; ``sum`` aggregates
 the current table. Gold numbers are reachable within a few steps (often: filter → sum).
 
