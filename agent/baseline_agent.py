@@ -65,10 +65,19 @@ def _extract_json_object(text: str) -> dict[str, Any]:
 
 class BaselineAgent:
     """
-    Calls OpenAI with the observation and returns a validated :class:`Action`.
+    Calls the LLM via the OpenAI Python client.
 
-    Requires ``OPENAI_API_KEY``. Optional ``OPENAI_MODEL`` (defaults to
-    ``gpt-4o-mini`` or the constructor ``model`` argument).
+    **Platform / LiteLLM proxy (required for hackathon validators):**
+
+    .. code-block:: python
+
+        OpenAI(
+            base_url=os.environ["API_BASE_URL"],
+            api_key=os.environ["API_KEY"],
+        )
+
+    Local fallback: ``OPENAI_API_KEY`` or ``HF_TOKEN`` with default base
+    ``https://api.openai.com/v1`` when ``API_BASE_URL`` is unset.
     """
 
     def __init__(
@@ -79,12 +88,13 @@ class BaselineAgent:
         temperature: float = 0.0,
         seed: int = 42,
     ) -> None:
-        # Pre-submission checklist: HF_TOKEN + MODEL_NAME + API_BASE_URL
         api_key = (
-            os.environ.get("HF_TOKEN", "").strip()
+            os.environ.get("API_KEY", "").strip()
+            or os.environ.get("HF_TOKEN", "").strip()
             or os.environ.get("OPENAI_API_KEY", "").strip()
         )
         api_base = os.environ.get("API_BASE_URL", "").strip()
+
         if model:
             self._model = model
         elif os.environ.get("MODEL_NAME", "").strip():
@@ -102,12 +112,20 @@ class BaselineAgent:
 
         if not api_key:
             raise ValueError(
-                "Set HF_TOKEN or OPENAI_API_KEY for the OpenAI client."
+                "Set API_KEY (platform proxy), or HF_TOKEN / OPENAI_API_KEY (local)."
             )
-        client_kwargs: dict[str, Any] = {"api_key": api_key}
-        if api_base:
-            client_kwargs["base_url"] = api_base.rstrip("/")
-        self._client = OpenAI(**client_kwargs)
+        # If the platform sets API_KEY, it must be paired with their proxy URL — never use api.openai.com.
+        if os.environ.get("API_KEY", "").strip() and not api_base:
+            raise ValueError(
+                "API_BASE_URL must be set when API_KEY is set (use the LiteLLM proxy URL from the environment)."
+            )
+        if not api_base:
+            api_base = "https://api.openai.com/v1"
+
+        self._client = OpenAI(
+            api_key=api_key,
+            base_url=api_base.rstrip("/"),
+        )
 
     def act(self, observation: Observation) -> Action:
         """Return an action for the given observation."""
