@@ -1,9 +1,12 @@
 """Official baseline inference entrypoint (pre-submission checklist).
 
-Environment variables (required for full LLM evaluation):
-- API_BASE_URL  — Chat Completions base URL (e.g. https://api.openai.com/v1)
-- MODEL_NAME    — Model id for inference
-- HF_TOKEN      — API key (OpenAI-compatible; passed to OpenAI client)
+Environment variables (required for full LLM evaluation on the platform):
+- API_BASE_URL — LiteLLM proxy base URL (injected by the platform; do not hardcode)
+- API_KEY      — Key for the proxy (injected as ``API_KEY``; use with ``API_BASE_URL``)
+- MODEL_NAME   — Model id the proxy exposes (e.g. gpt-4o-mini if the platform provides it)
+
+Optional aliases (local / Spaces UI): ``HF_TOKEN`` or ``OPENAI_API_KEY`` for the key only;
+``API_BASE_URL`` is still required for proxy traffic to be counted.
 
 Optional:
 - BASELINE_SEED — default 42
@@ -49,13 +52,17 @@ def _print_end(
 def _env_ready() -> bool:
     api_base = os.environ.get("API_BASE_URL", "").strip()
     model_name = os.environ.get("MODEL_NAME", "").strip()
-    hf_token = os.environ.get("HF_TOKEN", "").strip()
-    if not api_base or not model_name or not hf_token:
+    api_key = (
+        os.environ.get("API_KEY", "").strip()
+        or os.environ.get("HF_TOKEN", "").strip()
+        or os.environ.get("OPENAI_API_KEY", "").strip()
+    )
+    if not api_base or not model_name or not api_key:
         return False
     os.environ["API_BASE_URL"] = api_base
     os.environ["MODEL_NAME"] = model_name
-    os.environ["HF_TOKEN"] = hf_token
-    os.environ["OPENAI_API_KEY"] = hf_token
+    os.environ["API_KEY"] = api_key
+    os.environ["OPENAI_API_KEY"] = api_key
     os.environ["OPENAI_MODEL"] = model_name
     return True
 
