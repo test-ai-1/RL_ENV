@@ -23,7 +23,7 @@ def main() -> None:
     ensure_llm_env_defaults()
     if not has_api_key():
         print(
-            "HF_TOKEN or OPENAI_API_KEY is required for evaluation.",
+            "API_KEY (platform) or HF_TOKEN / OPENAI_API_KEY (local) is required.",
             file=sys.stderr,
         )
         sys.exit(1)
