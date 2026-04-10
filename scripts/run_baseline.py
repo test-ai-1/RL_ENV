@@ -74,10 +74,9 @@ def main() -> None:
     ensure_llm_env_defaults()
     if not has_api_key():
         print(
-            "Set HF_TOKEN or OPENAI_API_KEY.\n"
-            "  • PowerShell:  $env:HF_TOKEN = 'sk-...'\n"
-            f"  • Or add to     {_PROJECT_ROOT / '.env'}\n"
-            "  • Also set API_BASE_URL (e.g. https://api.openai.com/v1) and MODEL_NAME for inference.py",
+            "Set API_KEY (platform) or HF_TOKEN / OPENAI_API_KEY (local).\n"
+            "  • Platform: API_BASE_URL + API_KEY + MODEL_NAME from the organizer environment\n"
+            f"  • Local .env: {_PROJECT_ROOT / '.env'}",
             file=sys.stderr,
         )
         sys.exit(1)
