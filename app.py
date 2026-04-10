@@ -67,11 +67,10 @@ def run_eval(seed: int, model: str, api_key: str) -> str:
         os.environ["MODEL_NAME"] = model.strip()
         os.environ["OPENAI_MODEL"] = model.strip()
     if api_key.strip():
+        os.environ["API_KEY"] = api_key.strip()
         os.environ["HF_TOKEN"] = api_key.strip()
         os.environ["OPENAI_API_KEY"] = api_key.strip()
-    api_base = os.environ.get("API_BASE_URL", "").strip()
-    if not api_base:
-        os.environ["API_BASE_URL"] = "https://api.openai.com/v1"
+    # Do not override API_BASE_URL: Space secrets must supply the LiteLLM proxy URL.
 
     output = io.StringIO()
     try:
@@ -87,11 +86,11 @@ demo = gr.Interface(
     inputs=[
         gr.Number(label="BASELINE_SEED", value=42, precision=0),
         gr.Textbox(label="MODEL_NAME (optional)", value="gpt-4o-mini"),
-        gr.Textbox(label="HF_TOKEN / API key", type="password"),
+        gr.Textbox(label="API_KEY (or paste proxy key)", type="password"),
     ],
     outputs=gr.Textbox(label="Run output", lines=20),
     title="Tabular Analyst OpenEnv Baseline",
-    description="Runs evaluation. Set Space secrets: API_BASE_URL, MODEL_NAME, HF_TOKEN.",
+    description="Set Space secrets: API_BASE_URL (LiteLLM proxy), API_KEY, MODEL_NAME. Optional: paste API_KEY here.",
 )
 
 try:
