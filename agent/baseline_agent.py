@@ -124,27 +124,33 @@ class BaselineAgent:
             {"role": "system", "content": _SYSTEM_PROMPT},
             {"role": "user", "content": user_message},
         ]
+        def _create(**extra: Any) -> Any:
+            kwargs: dict[str, Any] = {
+                "model": self._model,
+                "temperature": self._temperature,
+                "messages": messages,
+            }
+            kwargs.update(extra)
+            return self._client.chat.completions.create(**kwargs)
+
         try:
-            completion = self._client.chat.completions.create(
-                model=self._model,
-                temperature=self._temperature,
+            completion = _create(
                 seed=self._seed,
                 response_format={"type": "json_object"},
-                messages=messages,
             )
         except RateLimitError as exc:
             raise RuntimeError(
                 "OpenAI returned 429 (rate limit). Retry later or check your account limits."
             ) from exc
         except APIError as exc:
-            # Some models may not support JSON mode; retry without it.
+            # Some models/endpoints reject json_mode and/or seed; retry with minimal kwargs.
             if getattr(exc, "status_code", None) == 400:
-                completion = self._client.chat.completions.create(
-                    model=self._model,
-                    temperature=self._temperature,
-                    seed=self._seed,
-                    messages=messages,
-                )
+                try:
+                    completion = _create(
+                        seed=self._seed,
+                    )
+                except APIError:
+                    completion = _create()
             else:
                 raise
 
