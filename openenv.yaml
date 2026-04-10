@@ -48,6 +48,6 @@ baseline:
 submission:
   required_env:
     - API_BASE_URL
+    - API_KEY
     - MODEL_NAME
-    - HF_TOKEN
   precheck_script: scripts/pre_submit_check.py
