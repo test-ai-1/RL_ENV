@@ -74,9 +74,9 @@ def main() -> None:
     ensure_llm_env_defaults()
     if not has_api_key():
         print(
-            "Set API_KEY (platform) or HF_TOKEN / OPENAI_API_KEY (local).\n"
-            "  • Platform: API_BASE_URL + API_KEY + MODEL_NAME from the organizer environment\n"
-            f"  • Local .env: {_PROJECT_ROOT / '.env'}",
+            "Set HF_TOKEN or API_KEY (Hugging Face read token), or OPENAI_API_KEY for OpenAI-only.\n"
+            f"  • Local .env: {_PROJECT_ROOT / '.env'}\n"
+            "  • HF defaults: API_BASE_URL=https://router.huggingface.co/v1, MODEL_NAME=Qwen/Qwen2.5-72B-Instruct",
             file=sys.stderr,
         )
         sys.exit(1)
