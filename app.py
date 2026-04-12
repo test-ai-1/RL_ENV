@@ -11,6 +11,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse, JSONResponse
 
 from scripts.eval_baseline import main as eval_main
+from scripts.llm_env import ensure_llm_env_defaults
 
 fastapi_app = FastAPI(title="Tabular Analyst OpenEnv")
 
@@ -70,7 +71,8 @@ def run_eval(seed: int, model: str, api_key: str) -> str:
         os.environ["API_KEY"] = api_key.strip()
         os.environ["HF_TOKEN"] = api_key.strip()
         os.environ["OPENAI_API_KEY"] = api_key.strip()
-    # Do not override API_BASE_URL: Space secrets must supply the LiteLLM proxy URL.
+    # Official defaults: HF Inference Router + Qwen (see inference.py / competition docs).
+    ensure_llm_env_defaults()
 
     output = io.StringIO()
     try:
@@ -85,12 +87,22 @@ demo = gr.Interface(
     fn=run_eval,
     inputs=[
         gr.Number(label="BASELINE_SEED", value=42, precision=0),
-        gr.Textbox(label="MODEL_NAME (optional)", value="gpt-4o-mini"),
-        gr.Textbox(label="API_KEY (or paste proxy key)", type="password"),
+        gr.Textbox(
+            label="MODEL_NAME (optional)",
+            value="Qwen/Qwen2.5-72B-Instruct",
+        ),
+        gr.Textbox(
+            label="HF_TOKEN or API_KEY (HF access token)",
+            type="password",
+        ),
     ],
     outputs=gr.Textbox(label="Run output", lines=20),
     title="Tabular Analyst OpenEnv Baseline",
-    description="Set Space secrets: API_BASE_URL (LiteLLM proxy), API_KEY, MODEL_NAME. Optional: paste API_KEY here.",
+    description=(
+        "Set HF_TOKEN (read token from huggingface.co/settings/tokens). "
+        "Optional: API_BASE_URL (default https://router.huggingface.co/v1), MODEL_NAME. "
+        "Or paste token here."
+    ),
 )
 
 try:
