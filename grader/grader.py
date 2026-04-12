@@ -15,6 +15,11 @@ _EXACT_RTOL = 1e-9
 # Max relative error still counted as a partial match (exclusive of exact).
 _PARTIAL_MAX_REL = 0.10
 
+# Validator requires scores strictly in (0, 1), not 0.0 nor 1.0.
+_SCORE_WRONG = 0.01
+_SCORE_PARTIAL = 0.50
+_SCORE_EXACT = 0.99
+
 
 def _to_float(value: Any) -> Optional[float]:
     """Delegate to env parsing so grader matches messy task literals."""
@@ -26,12 +31,13 @@ def grade(prediction: Prediction, ground_truth: GroundTruth) -> float:
     Score a prediction against the reference answer.
 
     Returns:
-        1.0 — exact match (numeric values equal within tight tolerance; strings equal after strip).
-        0.5 — partial match (close numeric value but not exact; or strings equal ignoring case).
-        0.0 — no match or empty prediction.
+        Values strictly in ``(0, 1)`` (never ``0.0`` nor ``1.0``), per submission validators:
+        ``_SCORE_EXACT`` — exact match (numeric within tight tolerance; strings equal after strip).
+        ``_SCORE_PARTIAL`` — partial match (close numeric; or strings equal ignoring case).
+        ``_SCORE_WRONG`` — no match or empty prediction.
     """
     if prediction is None:
-        return 0.0
+        return _SCORE_WRONG
 
     pred_f = _to_float(prediction)
     truth_f = _to_float(ground_truth)
@@ -42,24 +48,24 @@ def grade(prediction: Prediction, ground_truth: GroundTruth) -> float:
     pred_s = str(prediction).strip()
     truth_s = str(ground_truth).strip()
     if pred_s == truth_s:
-        return 1.0
+        return _SCORE_EXACT
     if pred_s.casefold() == truth_s.casefold():
-        return 0.5
-    return 0.0
+        return _SCORE_PARTIAL
+    return _SCORE_WRONG
 
 
 def _grade_numeric(pred: float, truth: float) -> float:
     scale = max(abs(truth), 1e-12)
     err = abs(pred - truth)
     if err <= _EXACT_RTOL * max(1.0, abs(truth)):
-        return 1.0
+        return _SCORE_EXACT
     if truth == 0.0:
         if err <= 1e-9:
-            return 1.0
+            return _SCORE_EXACT
         if err <= 1e-3:
-            return 0.5
-        return 0.0
+            return _SCORE_PARTIAL
+        return _SCORE_WRONG
     rel_err = err / scale
     if rel_err <= _PARTIAL_MAX_REL:
-        return 0.5
-    return 0.0
+        return _SCORE_PARTIAL
+    return _SCORE_WRONG
