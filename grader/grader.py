@@ -19,6 +19,8 @@ _PARTIAL_MAX_REL = 0.10
 _SCORE_WRONG = 0.01
 _SCORE_PARTIAL = 0.50
 _SCORE_EXACT = 0.99
+# Intermediate STEP lines before a task final grade (must not use -1 or 0.0).
+GRADER_SCORE_PENDING = 0.001
 
 
 def _to_float(value: Any) -> Optional[float]:
