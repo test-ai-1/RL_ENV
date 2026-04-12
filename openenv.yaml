@@ -33,7 +33,8 @@ reward:
 grader:
   module: grader.grader
   function: grade
-  score_range: [0.0, 1.0]
+  # Returned scores use 0.01 / 0.50 / 0.99 — strictly inside (0, 1), never 0.0 or 1.0.
+  score_range: [0.01, 0.99]
 
 baseline:
   inference_script: inference.py
