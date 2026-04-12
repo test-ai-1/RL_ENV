@@ -21,6 +21,10 @@ tasks:
     - medium
     - hard
   count_min: 3
+  graders:
+    easy: { module: grader.grader, function: grade }
+    medium: { module: grader.grader, function: grade }
+    hard: { module: grader.grader, function: grade }
 
 reward:
   primary: env.reward.shaped_reward
