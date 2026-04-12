@@ -1,12 +1,17 @@
 """Official baseline inference entrypoint (pre-submission checklist).
 
-Environment variables (required for full LLM evaluation on the platform):
-- API_BASE_URL — LiteLLM proxy base URL (injected by the platform; do not hardcode)
-- API_KEY      — Key for the proxy (injected as ``API_KEY``; use with ``API_BASE_URL``)
-- MODEL_NAME   — Model id the proxy exposes (e.g. gpt-4o-mini if the platform provides it)
+Environment configuration (matches official OpenEnv sample):
 
-Optional aliases (local / Spaces UI): ``HF_TOKEN`` or ``OPENAI_API_KEY`` for the key only;
-``API_BASE_URL`` is still required for proxy traffic to be counted.
+- **HF_TOKEN** or **API_KEY** — Hugging Face access token (read permission). **Required.**
+  Create at: huggingface.co → Profile → Settings → Access Tokens.
+
+- **API_BASE_URL** — OpenAI-compatible chat base URL. **Optional;** defaults to the HF router:
+  ``https://router.huggingface.co/v1``
+
+- **MODEL_NAME** — Model id for inference. **Optional;** defaults to:
+  ``Qwen/Qwen2.5-72B-Instruct``
+
+Other providers: set ``API_BASE_URL`` to that provider's endpoint.
 
 Optional:
 - BASELINE_SEED — default 42
@@ -34,6 +39,10 @@ _PROJECT_ROOT = Path(__file__).resolve().parent
 if str(_PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(_PROJECT_ROOT))
 
+# Official sample defaults (HF Inference Router + Qwen)
+_DEFAULT_API_BASE_URL = "https://router.huggingface.co/v1"
+_DEFAULT_MODEL_NAME = "Qwen/Qwen2.5-72B-Instruct"
+
 
 def _print_end(
     *,
@@ -50,18 +59,22 @@ def _print_end(
 
 
 def _env_ready() -> bool:
-    api_base = os.environ.get("API_BASE_URL", "").strip()
-    model_name = os.environ.get("MODEL_NAME", "").strip()
+    """True when a token is set; applies official defaults for base URL and model."""
     api_key = (
-        os.environ.get("API_KEY", "").strip()
-        or os.environ.get("HF_TOKEN", "").strip()
+        os.environ.get("HF_TOKEN", "").strip()
+        or os.environ.get("API_KEY", "").strip()
         or os.environ.get("OPENAI_API_KEY", "").strip()
     )
-    if not api_base or not model_name or not api_key:
+    if not api_key:
         return False
+
+    api_base = os.environ.get("API_BASE_URL", "").strip() or _DEFAULT_API_BASE_URL
+    model_name = os.environ.get("MODEL_NAME", "").strip() or _DEFAULT_MODEL_NAME
+
     os.environ["API_BASE_URL"] = api_base
     os.environ["MODEL_NAME"] = model_name
     os.environ["API_KEY"] = api_key
+    os.environ["HF_TOKEN"] = api_key
     os.environ["OPENAI_API_KEY"] = api_key
     os.environ["OPENAI_MODEL"] = model_name
     return True
