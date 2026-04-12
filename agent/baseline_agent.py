@@ -12,7 +12,9 @@ from openai import APIError, OpenAI, RateLimitError
 from env.actions import Action
 from env.observations import Observation
 
-_DEFAULT_OPENAI_MODEL = "gpt-4o-mini"
+# Official OpenEnv / HF Inference sample default (overridden by MODEL_NAME)
+_DEFAULT_MODEL_NAME = "Qwen/Qwen2.5-72B-Instruct"
+_DEFAULT_API_BASE_URL = "https://router.huggingface.co/v1"
 
 _SYSTEM_PROMPT = """You are a multi-step data analyst agent. Decide ONE next action per turn.
 
@@ -65,19 +67,15 @@ def _extract_json_object(text: str) -> dict[str, Any]:
 
 class BaselineAgent:
     """
-    Calls the LLM via the OpenAI Python client.
+    Calls the LLM via the OpenAI Python client (OpenAI-compatible servers).
 
-    **Platform / LiteLLM proxy (required for hackathon validators):**
+    **Official sample (HF Inference Router):**
 
-    .. code-block:: python
+    - ``HF_TOKEN`` or ``API_KEY`` — required
+    - ``API_BASE_URL`` — optional; defaults to ``https://router.huggingface.co/v1``
+    - ``MODEL_NAME`` — optional; defaults to ``Qwen/Qwen2.5-72B-Instruct``
 
-        OpenAI(
-            base_url=os.environ["API_BASE_URL"],
-            api_key=os.environ["API_KEY"],
-        )
-
-    Local fallback: ``OPENAI_API_KEY`` or ``HF_TOKEN`` with default base
-    ``https://api.openai.com/v1`` when ``API_BASE_URL`` is unset.
+    Other providers: set ``API_BASE_URL`` and ``MODEL_NAME`` accordingly.
     """
 
     def __init__(
@@ -88,12 +86,21 @@ class BaselineAgent:
         temperature: float = 0.0,
         seed: int = 42,
     ) -> None:
-        api_key = (
-            os.environ.get("API_KEY", "").strip()
-            or os.environ.get("HF_TOKEN", "").strip()
-            or os.environ.get("OPENAI_API_KEY", "").strip()
+        hf_or_api = (
+            os.environ.get("HF_TOKEN", "").strip()
+            or os.environ.get("API_KEY", "").strip()
         )
-        api_base = os.environ.get("API_BASE_URL", "").strip()
+        openai_only = os.environ.get("OPENAI_API_KEY", "").strip()
+        api_key = hf_or_api or openai_only
+
+        if os.environ.get("API_BASE_URL", "").strip():
+            api_base = os.environ["API_BASE_URL"].strip()
+        elif hf_or_api:
+            api_base = _DEFAULT_API_BASE_URL
+        elif openai_only:
+            api_base = "https://api.openai.com/v1"
+        else:
+            api_base = _DEFAULT_API_BASE_URL
 
         if model:
             self._model = model
@@ -102,7 +109,7 @@ class BaselineAgent:
         elif os.environ.get("OPENAI_MODEL", "").strip():
             self._model = os.environ["OPENAI_MODEL"].strip()
         else:
-            self._model = _DEFAULT_OPENAI_MODEL
+            self._model = _DEFAULT_MODEL_NAME
         self._temperature = temperature
         self._seed = seed
 
@@ -112,15 +119,8 @@ class BaselineAgent:
 
         if not api_key:
             raise ValueError(
-                "Set API_KEY (platform proxy), or HF_TOKEN / OPENAI_API_KEY (local)."
+                "Set HF_TOKEN or API_KEY (Hugging Face token), or OPENAI_API_KEY for other providers."
             )
-        # If the platform sets API_KEY, it must be paired with their proxy URL — never use api.openai.com.
-        if os.environ.get("API_KEY", "").strip() and not api_base:
-            raise ValueError(
-                "API_BASE_URL must be set when API_KEY is set (use the LiteLLM proxy URL from the environment)."
-            )
-        if not api_base:
-            api_base = "https://api.openai.com/v1"
 
         self._client = OpenAI(
             api_key=api_key,
