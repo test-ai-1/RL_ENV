@@ -22,7 +22,8 @@ Structured stdout (exact tag prefixes; one line per record; fixed field order wi
 [STEP] cumulative_task_reward=<float> difficulty=<str> done=<bool> env_step=<int> grader_score=<float> operation=<str> reward=<float> task_index=<int>
 [END] average_grader_score=<float> exit_code=<int> num_tasks=<int> overall_grader_score=<float> status=<str>
 
-grader_score is -1.0 until the task episode completes; then it is in [0.0, 1.0].
+grader_score uses GRADER_SCORE_PENDING (0.001) until the task episode completes; final scores
+match ``grade()`` — always strictly inside (0, 1), never 0.0 or 1.0. [END] aggregates use the same rule.
 
 This script avoids uncaught exceptions and uses exit code 0 when [END] is printed so CI validators
 do not fail on SystemExit or bare tracebacks.
@@ -44,6 +45,15 @@ _DEFAULT_API_BASE_URL = "https://router.huggingface.co/v1"
 _DEFAULT_MODEL_NAME = "Qwen/Qwen2.5-72B-Instruct"
 
 
+def _open_unit_score(x: float) -> float:
+    """Keep aggregates strictly inside (0, 1); validators reject 0.0 and 1.0."""
+    if x <= 0.0:
+        return 0.01
+    if x >= 1.0:
+        return 0.99
+    return x
+
+
 def _print_end(
     *,
     avg: float,
@@ -52,9 +62,11 @@ def _print_end(
     overall: float,
     status: str,
 ) -> None:
+    avg_s = _open_unit_score(avg)
+    overall_s = _open_unit_score(overall)
     print(
-        f"[END] average_grader_score={avg:.4f} exit_code={exit_code} "
-        f"num_tasks={num_tasks} overall_grader_score={overall:.4f} status={status}"
+        f"[END] average_grader_score={avg_s:.4f} exit_code={exit_code} "
+        f"num_tasks={num_tasks} overall_grader_score={overall_s:.4f} status={status}"
     )
 
 
@@ -146,10 +158,10 @@ def main() -> int:
             f"[START] baseline_seed={seed} model_name= num_tasks=0 status=missing_env_vars"
         )
         _print_end(
-            avg=0.0,
+            avg=0.01,
             exit_code=0,
             num_tasks=0,
-            overall=0.0,
+            overall=0.01,
             status="missing_env_vars",
         )
         return 0
@@ -158,7 +170,7 @@ def main() -> int:
         from agent.baseline_agent import BaselineAgent
         from env.environment import DataEnv
         from env.tasks import ALL_TASKS
-        from grader.grader import grade
+        from grader.grader import GRADER_SCORE_PENDING, grade
     except Exception:
         traceback.print_exc(file=sys.stderr)
         print(
@@ -166,10 +178,10 @@ def main() -> int:
             f"num_tasks=0 status=import_error"
         )
         _print_end(
-            avg=0.0,
+            avg=0.01,
             exit_code=0,
             num_tasks=0,
-            overall=0.0,
+            overall=0.01,
             status="import_error",
         )
         return 0
@@ -184,10 +196,10 @@ def main() -> int:
     except Exception:
         traceback.print_exc(file=sys.stderr)
         _print_end(
-            avg=0.0,
+            avg=0.01,
             exit_code=0,
             num_tasks=len(ALL_TASKS),
-            overall=0.0,
+            overall=0.01,
             status="agent_init_error",
         )
         return 0
@@ -212,7 +224,7 @@ def main() -> int:
                 observation, reward, done, last_info = env.step(action)
                 cumulative_task_reward += float(reward)
                 env_step = int(last_info.get("steps_taken", 0))
-                g = -1.0
+                g = float(GRADER_SCORE_PENDING)
                 if done:
                     g = float(grade(last_info.get("computed_result"), task.correct_answer))
                     grader_scores.append(g)
@@ -225,14 +237,16 @@ def main() -> int:
                 )
         except Exception:
             traceback.print_exc(file=sys.stderr)
+            err_g = float(grade(None, task.correct_answer))
             print(
                 f"[STEP] cumulative_task_reward=0.0000 difficulty={task.difficulty} "
-                f"done=true env_step=0 grader_score=0.0000 operation=error "
+                f"done=true env_step=0 grader_score={err_g:.4f} operation=error "
                 f"reward=0.0000 task_index={task_index}"
             )
-            grader_scores.append(0.0)
+            grader_scores.append(err_g)
 
-    avg = sum(grader_scores) / max(1, len(grader_scores))
+    avg = sum(grader_scores) / len(grader_scores) if grader_scores else 0.01
+    avg = _open_unit_score(avg)
     _print_end(
         avg=avg,
         exit_code=0,
