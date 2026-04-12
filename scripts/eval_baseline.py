@@ -23,7 +23,8 @@ def main() -> None:
     ensure_llm_env_defaults()
     if not has_api_key():
         print(
-            "API_KEY (platform) or HF_TOKEN / OPENAI_API_KEY (local) is required.",
+            "HF_TOKEN or API_KEY (Hugging Face token) is required. "
+            "Optional: OPENAI_API_KEY for non-HF providers.",
             file=sys.stderr,
         )
         sys.exit(1)
