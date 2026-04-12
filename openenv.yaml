@@ -44,10 +44,13 @@ baseline:
     default_seed: 42
     temperature: 0.0
 
-# Pre-submission / evaluation standard env (OpenAI client)
+# Inference env (official sample): HF_TOKEN required; base URL + model have code defaults.
 submission:
   required_env:
-    - API_BASE_URL
-    - API_KEY
-    - MODEL_NAME
+    - HF_TOKEN
+  optional_defaults:
+    API_BASE_URL: https://router.huggingface.co/v1
+    MODEL_NAME: Qwen/Qwen2.5-72B-Instruct
+  notes:
+    - "API_KEY is accepted as an alias for HF_TOKEN"
   precheck_script: scripts/pre_submit_check.py
